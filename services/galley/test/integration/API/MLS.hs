@@ -416,8 +416,8 @@ testAddUserWithBundle = do
       (qcnv `elem` map cnvQualifiedId convs)
 
   returnedGS <- getGroupInfo alice (fmap Conv qcnv)
-  liftIO $ assertBool "Commit does not contain a public group State" (isJust (mpPublicGroupState commit))
-  liftIO $ mpPublicGroupState commit @?= Just returnedGS
+  liftIO $ assertBool "Commit does not contain a public group State" (isJust (mpGroupInfo commit))
+  liftIO $ mpGroupInfo commit @?= Just returnedGS
 
 testAddUserWithBundleIncompleteWelcome :: TestM ()
 testAddUserWithBundleIncompleteWelcome = do
@@ -460,7 +460,7 @@ testAddUser = do
     traverse_ uploadNewKeyPackage [bob1, bob2]
 
     (_, qcnv) <- setupMLSGroup alice1
-    events <- createAddCommit alice1 [bob] >>= sendAndConsumeCommit
+    events <- createAddCommit alice1 [bob] >>= sendAndConsumeCommitBundle
     event <- assertOne events
     liftIO $ assertJoinEvent qcnv alice [bob] roleNameWireMember event
     pure qcnv
@@ -1980,7 +1980,7 @@ testGetGroupInfoOfLocalConv = do
     void $ sendAndConsumeCommitBundle commit
 
     -- check the group info matches
-    gs <- assertJust (mpPublicGroupState commit)
+    gs <- assertJust (mpGroupInfo commit)
     returnedGS <- liftTest $ getGroupInfo alice (fmap Conv qcnv)
     liftIO $ gs @=? returnedGS
 
@@ -2023,7 +2023,7 @@ testFederatedGetGroupInfo = do
     [alice1, bob1] <- traverse createMLSClient [alice, bob]
     (_, qcnv) <- setupMLSGroup alice1
     commit <- createAddCommit alice1 [bob]
-    groupState <- assertJust (mpPublicGroupState commit)
+    groupState <- assertJust (mpGroupInfo commit)
 
     let mock = receiveCommitMock [bob1] <|> welcomeMock
     void . withTempMockFederator' mock $ do
@@ -2500,7 +2500,7 @@ testJoinRemoteSubConv = do
     receiveNewRemoteConv qcs subGroupId
 
     -- bob joins subconversation
-    let pgs = mpPublicGroupState initialCommit
+    let pgs = mpGroupInfo initialCommit
     let mock =
           ("send-mls-commit-bundle" ~> MLSMessageResponseUpdates [] (UnreachableUsers []))
             <|> queryGroupStateMock (fold pgs) bob
@@ -2980,7 +2980,7 @@ testDeleteRemoteParentOfSubConv = do
     -- inform backend about the subconversation
     receiveNewRemoteConv qcs subGroupId
 
-    let pgs = mpPublicGroupState initialCommit
+    let pgs = mpGroupInfo initialCommit
     let mock =
           ("send-mls-commit-bundle" ~> MLSMessageResponseUpdates [] (UnreachableUsers []))
             <|> queryGroupStateMock (fold pgs) bob
@@ -3250,7 +3250,7 @@ testLeaveRemoteSubConv = do
     -- inform backend about the subconversation
     receiveNewRemoteConv qcs subGroupId
 
-    let pgs = mpPublicGroupState initialCommit
+    let pgs = mpGroupInfo initialCommit
     let mock =
           ("send-mls-commit-bundle" ~> MLSMessageResponseUpdates [] (UnreachableUsers []))
             <|> queryGroupStateMock (fold pgs) bob
