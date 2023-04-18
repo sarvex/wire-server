@@ -370,7 +370,6 @@ type ConversationAPI =
                :> MakesFederatedCall 'Galley "on-conversation-created"
                :> Until 'V3
                :> CanThrow 'ConvAccessDenied
-               :> CanThrow 'MLSMissingSenderClient
                :> CanThrow 'MLSNonEmptyMemberList
                :> CanThrow 'MLSNotEnabled
                :> CanThrow 'NotConnected
@@ -392,7 +391,6 @@ type ConversationAPI =
                :> From 'V3
                :> Until 'V4
                :> CanThrow 'ConvAccessDenied
-               :> CanThrow 'MLSMissingSenderClient
                :> CanThrow 'MLSNonEmptyMemberList
                :> CanThrow 'MLSNotEnabled
                :> CanThrow 'NotConnected
@@ -412,7 +410,6 @@ type ConversationAPI =
                :> MakesFederatedCall 'Galley "on-conversation-created"
                :> From 'V4
                :> CanThrow 'ConvAccessDenied
-               :> CanThrow 'MLSMissingSenderClient
                :> CanThrow 'MLSNonEmptyMemberList
                :> CanThrow 'MLSNotEnabled
                :> CanThrow 'NotConnected
