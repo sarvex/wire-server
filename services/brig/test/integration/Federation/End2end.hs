@@ -737,7 +737,7 @@ testSendMLSMessage brig1 brig2 galley1 galley2 cannon1 cannon2 = do
             { updateClientMLSPublicKeys =
                 Map.singleton
                   Ed25519
-                  aliceKP.rmValue.leafNode.signatureKey
+                  aliceKP.value.leafNode.signatureKey
             }
     put
       ( brig1
@@ -819,7 +819,7 @@ testSendMLSMessage brig1 brig2 galley1 galley2 cannon1 cannon2 = do
     liftIO $ BS.writeFile (tmp </> "group.json") groupJSON
 
     -- invite alice
-    liftIO $ BS.writeFile (tmp </> aliceClientId) (rmRaw aliceKP)
+    liftIO $ BS.writeFile (tmp </> aliceClientId) (raw aliceKP)
     commit <-
       liftIO $
         spawn
@@ -1014,7 +1014,7 @@ testSendMLSMessageToSubConversation brig1 brig2 galley1 galley2 cannon1 cannon2 
             { updateClientMLSPublicKeys =
                 Map.singleton
                   Ed25519
-                  aliceKP.rmValue.leafNode.signatureKey
+                  aliceKP.value.leafNode.signatureKey
             }
     put
       ( brig1
@@ -1082,7 +1082,7 @@ testSendMLSMessageToSubConversation brig1 brig2 galley1 galley2 cannon1 cannon2 
     liftIO $ BS.writeFile (tmp </> "group.json") groupJSON
 
     -- invite alice
-    liftIO $ BS.writeFile (tmp </> aliceClientId) (rmRaw aliceKP)
+    liftIO $ BS.writeFile (tmp </> aliceClientId) (raw aliceKP)
     commit <-
       liftIO $
         spawn
