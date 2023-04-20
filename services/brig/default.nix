@@ -9,6 +9,7 @@
 , amazonka-dynamodb
 , amazonka-ses
 , amazonka-sqs
+, amqp
 , async
 , attoparsec
 , auto-update
@@ -175,6 +176,7 @@ mkDerivation {
     amazonka-dynamodb
     amazonka-ses
     amazonka-sqs
+    amqp
     async
     attoparsec
     auto-update
