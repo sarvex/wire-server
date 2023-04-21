@@ -1590,7 +1590,7 @@ testBackendRemoveProposalRecreateClient = do
 
     void $ createPendingProposalCommit alice1 >>= sendAndConsumeCommitBundle
 
-    (_, ref) <- assertOne =<< getClientsFromGroupState alice1 alice
+    (_, idx) <- assertOne =<< getClientsFromGroupState alice1 alice
 
     liftTest $
       deleteClient (qUnqualified alice) (ciClient alice1) (Just defPassword)
@@ -1606,7 +1606,7 @@ testBackendRemoveProposalRecreateClient = do
         createExternalCommit alice2 Nothing cnv
           >>= sendAndConsumeCommitBundle
       WS.assertMatch (5 # WS.Second) wsA $
-        wsAssertBackendRemoveProposal alice (Conv <$> qcnv) ref
+        wsAssertBackendRemoveProposal alice (Conv <$> qcnv) idx
 
     consumeMessage1 alice2 proposal
     void $ createPendingProposalCommit alice2 >>= sendAndConsumeCommitBundle
@@ -1631,9 +1631,9 @@ testBackendRemoveProposalLocalConvLocalUser = do
           { mlsMembers = Set.difference (mlsMembers mls) (Set.fromList [bob1, bob2])
           }
 
-      for bobClients $ \(_, ref) -> do
+      for bobClients $ \(_, idx) -> do
         [msg] <- WS.assertMatchN (5 # Second) wss $ \n ->
-          wsAssertBackendRemoveProposal bob (Conv <$> qcnv) ref n
+          wsAssertBackendRemoveProposal bob (Conv <$> qcnv) idx n
         consumeMessage1 alice1 msg
 
     -- alice commits the external proposals
@@ -1666,9 +1666,9 @@ testBackendRemoveProposalLocalConvRemoteUser = do
                 }
             )
 
-        for_ bobClients $ \(_, ref) ->
+        for_ bobClients $ \(_, idx) ->
           WS.assertMatch (5 # WS.Second) wsA $
-            wsAssertBackendRemoveProposal bob (Conv <$> qcnv) ref
+            wsAssertBackendRemoveProposal bob (Conv <$> qcnv) idx
 
 sendRemoteMLSWelcome :: TestM ()
 sendRemoteMLSWelcome = do
@@ -1720,10 +1720,10 @@ testBackendRemoveProposalLocalConvLocalLeaverCreator = do
           { mlsMembers = Set.difference (mlsMembers mls) (Set.fromList [alice1])
           }
 
-      for_ aliceClients $ \(_, ref) -> do
+      for_ aliceClients $ \(_, idx) -> do
         -- only bob's clients should receive the external proposals
         msgs <- WS.assertMatchN (5 # Second) (drop 1 wss) $ \n ->
-          wsAssertBackendRemoveProposal alice (Conv <$> qcnv) ref n
+          wsAssertBackendRemoveProposal alice (Conv <$> qcnv) idx n
         traverse_ (uncurry consumeMessage1) (zip [bob1, bob2] msgs)
 
       -- but everyone should receive leave events
@@ -1765,10 +1765,10 @@ testBackendRemoveProposalLocalConvLocalLeaverCommitter = do
           { mlsMembers = Set.difference (mlsMembers mls) (Set.fromList [bob1, bob2])
           }
 
-      for_ bobClients $ \(_, ref) -> do
+      for_ bobClients $ \(_, idx) -> do
         -- only alice and charlie should receive the external proposals
         msgs <- WS.assertMatchN (5 # Second) (take 2 wss) $ \n ->
-          wsAssertBackendRemoveProposal bob (Conv <$> qcnv) ref n
+          wsAssertBackendRemoveProposal bob (Conv <$> qcnv) idx n
         traverse_ (uncurry consumeMessage1) (zip [alice1, charlie1] msgs)
 
       -- but everyone should receive leave events
@@ -1809,9 +1809,9 @@ testBackendRemoveProposalLocalConvRemoteLeaver = do
                 curAction = SomeConversationAction SConversationLeaveTag ()
               }
 
-        for_ bobClients $ \(_, ref) ->
+        for_ bobClients $ \(_, idx) ->
           WS.assertMatch_ (5 # WS.Second) wsA $
-            wsAssertBackendRemoveProposal bob (Conv <$> qcnv) ref
+            wsAssertBackendRemoveProposal bob (Conv <$> qcnv) idx
 
 testBackendRemoveProposalLocalConvLocalClient :: TestM ()
 testBackendRemoveProposalLocalConvLocalClient = do
@@ -1822,7 +1822,7 @@ testBackendRemoveProposalLocalConvLocalClient = do
     traverse_ uploadNewKeyPackage [bob1, bob2, charlie1]
     (_, qcnv) <- setupMLSGroup alice1
     void $ createAddCommit alice1 [bob, charlie] >>= sendAndConsumeCommitBundle
-    Just (_, kpBob1) <- find (\(ci, _) -> ci == bob1) <$> getClientsFromGroupState alice1 bob
+    Just (_, idxBob1) <- find (\(ci, _) -> ci == bob1) <$> getClientsFromGroupState alice1 bob
 
     mlsBracket [alice1, bob1] $ \[wsA, wsB] -> do
       liftTest $
@@ -1838,7 +1838,7 @@ testBackendRemoveProposalLocalConvLocalClient = do
         wsAssertClientRemoved (ciClient bob1)
 
       msg <- WS.assertMatch (5 # WS.Second) wsA $ \notification -> do
-        wsAssertBackendRemoveProposal bob (Conv <$> qcnv) kpBob1 notification
+        wsAssertBackendRemoveProposal bob (Conv <$> qcnv) idxBob1 notification
 
       for_ [alice1, bob2, charlie1] $
         flip consumeMessage1 msg
@@ -1858,7 +1858,7 @@ testBackendRemoveProposalLocalConvRemoteClient = do
     (_, qcnv) <- setupMLSGroup alice1
     commit <- createAddCommit alice1 [bob]
 
-    [(_, bob1KP)] <- getClientsFromGroupState alice1 bob
+    [(_, idxBob1)] <- getClientsFromGroupState alice1 bob
     let mock = receiveCommitMock [bob1] <|> welcomeMock <|> messageSentMock
     void . withTempMockFederator' mock $ do
       mlsBracket [alice1] $ \[wsA] -> void $ do
@@ -1874,7 +1874,7 @@ testBackendRemoveProposalLocalConvRemoteClient = do
 
         WS.assertMatch_ (5 # WS.Second) wsA $
           \notification ->
-            void $ wsAssertBackendRemoveProposal bob (Conv <$> qcnv) bob1KP notification
+            void $ wsAssertBackendRemoveProposal bob (Conv <$> qcnv) idxBob1 notification
 
 testGetGroupInfoOfLocalConv :: TestM ()
 testGetGroupInfoOfLocalConv = do
@@ -3017,7 +3017,7 @@ testLeaveSubConv isSubConvCreator = do
 
     let firstLeaver = if isSubConvCreator then bob1 else alice1
     -- a member leaves the subconversation
-    [firstLeaverKP] <-
+    [idxFirstLeaver] <-
       map snd . filter (\(cid, _) -> cid == firstLeaver)
         <$> getClientsFromGroupState
           alice1
@@ -3042,7 +3042,7 @@ testLeaveSubConv isSubConvCreator = do
           wsAssertBackendRemoveProposal
             (cidQualifiedUser firstLeaver)
             (Conv <$> qcnv)
-            firstLeaverKP
+            idxFirstLeaver
       traverse_ (uncurry consumeMessage1) (zip others msgs)
       -- assert the leaver gets no proposal or event
       void . liftIO $ WS.assertNoEvent (5 # WS.Second) [wsLeaver]
@@ -3078,7 +3078,7 @@ testLeaveSubConv isSubConvCreator = do
       liftIO $ length (pscMembers psc) @?= 3
 
     -- charlie1 leaves
-    [charlie1KP] <-
+    [idxCharlie1] <-
       map snd . filter (\(cid, _) -> cid == charlie1)
         <$> getClientsFromGroupState (head others) charlie
     mlsBracket others $ \wss -> do
@@ -3086,7 +3086,7 @@ testLeaveSubConv isSubConvCreator = do
 
       msgs <-
         WS.assertMatchN (5 # WS.Second) wss $
-          wsAssertBackendRemoveProposal charlie (Conv <$> qcnv) charlie1KP
+          wsAssertBackendRemoveProposal charlie (Conv <$> qcnv) idxCharlie1
       traverse_ (uncurry consumeMessage1) (zip others msgs)
 
     -- a member commits the pending proposal
@@ -3197,7 +3197,7 @@ testRemoveUserParent = do
       for_ [alice1, bob2, charlie1, charlie2] $ \c ->
         void $ createExternalCommit c Nothing qcs >>= sendAndConsumeCommitBundle
 
-      [(_, kpref1), (_, kpref2)] <- getClientsFromGroupState alice1 charlie
+      [(_, idxRef1), (_, idxRef2)] <- getClientsFromGroupState alice1 charlie
 
       -- charlie leaves the main conversation
       mlsBracket [alice1, bob1, bob2] $ \wss -> do
@@ -3212,12 +3212,12 @@ testRemoveUserParent = do
             }
 
         msg1 <- WS.assertMatchN (5 # Second) wss $ \n ->
-          wsAssertBackendRemoveProposal charlie (Conv <$> qcnv) kpref1 n
+          wsAssertBackendRemoveProposal charlie (Conv <$> qcnv) idxRef1 n
 
         traverse_ (uncurry consumeMessage1) (zip [alice1, bob1, bob2] msg1)
 
         msg2 <- WS.assertMatchN (5 # Second) wss $ \n ->
-          wsAssertBackendRemoveProposal charlie (Conv <$> qcnv) kpref2 n
+          wsAssertBackendRemoveProposal charlie (Conv <$> qcnv) idxRef2 n
 
         traverse_ (uncurry consumeMessage1) (zip [alice1, bob1, bob2] msg2)
 
@@ -3259,7 +3259,7 @@ testRemoveCreatorParent = do
       for_ [bob1, bob2, charlie1, charlie2] $ \c ->
         void $ createExternalCommit c Nothing qcs >>= sendAndConsumeCommitBundle
 
-      [(_, kpref1)] <- getClientsFromGroupState alice1 alice
+      [(_, idxRef1)] <- getClientsFromGroupState alice1 alice
 
       -- creator leaves the main conversation
       mlsBracket [bob1, bob2, charlie1, charlie2] $ \wss -> do
@@ -3276,7 +3276,7 @@ testRemoveCreatorParent = do
         msg <- WS.assertMatchN (5 # Second) wss $ \n ->
           -- Checks proposal for subconv, parent doesn't get one
           -- since alice is not notified of her own removal
-          wsAssertBackendRemoveProposal alice (Conv <$> qcnv) kpref1 n
+          wsAssertBackendRemoveProposal alice (Conv <$> qcnv) idxRef1 n
 
         traverse_ (uncurry consumeMessage1) (zip [bob1, bob2, charlie1, charlie2] msg)
 
@@ -3347,13 +3347,13 @@ testCreatorRemovesUserFromParent = do
 
         State.put stateSub
         -- Get client state for alice and fetch bob client identities
-        [(_, kprefBob1), (_, kprefBob2)] <- getClientsFromGroupState alice1 bob
+        [(_, idxBob1), (_, idxBob2)] <- getClientsFromGroupState alice1 bob
 
         -- handle bob1 removal
         msgs <- WS.assertMatchN (5 # Second) wss $ \n -> do
           -- it was an alice proposal for the parent,
           -- but it's a backend proposal for the sub
-          wsAssertBackendRemoveProposal bob qcs kprefBob1 n
+          wsAssertBackendRemoveProposal bob qcs idxBob1 n
 
         traverse_ (uncurry consumeMessage1) (zip [alice1, charlie1, charlie2] msgs)
 
@@ -3361,7 +3361,7 @@ testCreatorRemovesUserFromParent = do
         msgs2 <- WS.assertMatchN (5 # Second) wss $ \n -> do
           -- it was an alice proposal for the parent,
           -- but it's a backend proposal for the sub
-          wsAssertBackendRemoveProposal bob qcs kprefBob2 n
+          wsAssertBackendRemoveProposal bob qcs idxBob2 n
 
         traverse_ (uncurry consumeMessage1) (zip [alice1, charlie1, charlie2] msgs2)
 
