@@ -21,7 +21,7 @@ if 'SOURCE_DATE_EPOCH' in os.environ:
 
 project = 'Wire'
 author = 'Wire Swiss GmbH'
-copyright = f'2019 - 2023, Wire Swiss GmbH'
+copyright = '2019 - 2023, Wire Swiss GmbH'
 version = '0.0.4'
 # the 'release' variable is used in latex-based PDF generation
 release = version

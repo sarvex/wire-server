@@ -64,11 +64,7 @@ def add_client(
     }
     if ctype == "legalhold":
         body["class"] = "legalhold"
-    if internal:
-        url = f"/i/clients/{obj_id(user)}"
-    else:
-        url = "/clients"
-
+    url = f"/i/clients/{obj_id(user)}" if internal else "/clients"
     url = ctx.mkurl("brig", url, internal=internal)
     return ctx.request("POST", url, user=user, json=body)
 
@@ -133,7 +129,7 @@ def mls_welcome(ctx, user, welcome):
 
 
 def mls_post_commit_bundle(ctx, commit_bundle):
-    url = ctx.mkurl("galley", f"/mls/commit-bundles")
+    url = ctx.mkurl("galley", "/mls/commit-bundles")
     return ctx.request(
         "POST",
         url,
@@ -144,7 +140,7 @@ def mls_post_commit_bundle(ctx, commit_bundle):
 
 def mls_send_message(ctx, msg):
     headers = {"Content-Type": "message/mls"}
-    url = ctx.mkurl("galley", f"/mls/messages")
+    url = ctx.mkurl("galley", "/mls/messages")
     return ctx.request("POST", url, headers=headers, data=msg)
 
 

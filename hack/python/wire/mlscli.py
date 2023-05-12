@@ -205,13 +205,12 @@ def add_member(state, kpfiles):
     with open(pgs_file, "rb") as f:
         pgs = f.read()
 
-    message_package = {
+    return {
         "sender": state.client_identity,
         "message": msg,
         "welcome": welcome,
         "public_group_state": pgs,
     }
-    return message_package
 
 
 def make_bundle(message_package):
@@ -264,10 +263,9 @@ def consume_message(state, msg, removal_key_file, ignore_stale=False):
 def create_application_message(state, message_content):
     args = ["message", "--group", "<group-in>", message_content]
     msg = mlscli(state, state.client_identity, args)
-    message_package = {
+    return {
         "sender": state.client_identity,
         "message": msg,
         "welcome": None,
         "public_group_state": None,
     }
-    return message_package

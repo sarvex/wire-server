@@ -76,7 +76,9 @@ print('-' * 32)
 
 if new_version != current_version:
   # Clone the wire-emails project at new version
-  os.system('git clone --depth=1 https://github.com/wireapp/wire-emails.git -b %s' % new_version)
+  os.system(
+      f'git clone --depth=1 https://github.com/wireapp/wire-emails.git -b {new_version}'
+  )
   os.chdir(emails)
 
   # Move wire-emails/dist to templates

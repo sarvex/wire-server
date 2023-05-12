@@ -7,13 +7,7 @@ import subprocess
 import os.path
 
 def sanitize_name(name):
-    r = ''
-    for c in name:
-        if c.isalpha():
-            r += c
-        else:
-            r += '_'
-    return r
+    return ''.join(c if c.isalpha() else '_' for c in name)
 
 driver = webdriver.Firefox()
 
@@ -22,7 +16,7 @@ for i, p in enumerate(output.splitlines()):
     n = os.path.relpath(p, 'build')
     url_dev = f'http://localhost:3000/{n}'
     url_ref = f'https://docs.wire.com/{n}'
-    img_basename = sanitize_name(n) + '_' + str(i)
+    img_basename = f'{sanitize_name(n)}_{str(i)}'
 
     try:
         print(f'./screenshots/{i:03}-{img_basename}_dev.png')

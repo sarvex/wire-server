@@ -22,8 +22,7 @@ def parse_bumps(stdout, env, maxreleases=50):
     for commit in stdout.splitlines():
         [d, h, msg] = commit.decode('utf8').split('<<>>')
         x = f'\[env:{re.escape(env)}\] Deploy wire-server version (.*)'
-        m = re.match(x, msg)
-        if m:
+        if m := re.match(x, msg):
             (version, ) = m.groups()
             result[version] = {'t': int(d), 'hash': h}
             releases += 1
@@ -34,8 +33,7 @@ def parse_bumps(stdout, env, maxreleases=50):
 
 def get_chart_version(s):
     for x in s.split(', '):
-        m = re.match('tag: chart/(.+)', x)
-        if m:
+        if m := re.match('tag: chart/(.+)', x):
             (chart_version,) = m.groups()
             return chart_version
 
@@ -71,10 +69,7 @@ def humanize_difftime(d):
         return f'{minutes}m'
 
     days, hours = divmod(hours, 24)
-    if days == 0:
-        return f'{hours}h {minutes}m'
-
-    return f'{days}d'
+    return f'{hours}h {minutes}m' if days == 0 else f'{days}d'
 
 def humanize_time(ts):
     ts = datetime.datetime.fromtimestamp(ts)
@@ -105,9 +100,14 @@ def main(args):
     commits = parse_tags(out)
     output = ''
     output += ' '.join([a for a in cmd if not a.startswith('--format')]) + '\n'
-    output += 'with version bumps for ' + Colors.GREEN + f'{args.env}' + Colors.RESET + '\n\n'
+    output += (
+        f'with version bumps for {Colors.GREEN}'
+        + f'{args.env}'
+        + Colors.RESET
+        + '\n\n'
+    )
     for commit in commits:
-        s = Colors.YELLOW + f'{commit["hash"]}' + Colors.RESET + f': {commit["msg"]}'
+        s = f'{Colors.YELLOW}{commit["hash"]}{Colors.RESET}' + f': {commit["msg"]}'
 
         s += f'''
 Author: {commit["author_name"]}
@@ -115,12 +115,15 @@ Author: {commit["author_name"]}
         if commit['chart_version']:
             s += f'Chart Version: {commit["chart_version"]}\n'
 
-            bump = env_bumps.get(commit['chart_version'])
-            if bump:
+            if bump := env_bumps.get(commit['chart_version']):
                 bump_time = humanize_time(bump['t']) + f' ({bump["hash"]})'
             else:
-                bump_time = Colors.RED + '<not deployed>' + Colors.RESET
-            s += Colors.GREEN + f'{args.env}' + Colors.RESET + ' bump: ' + Colors.GREEN + f'{bump_time}\n' + Colors.RESET
+                bump_time = f'{Colors.RED}<not deployed>{Colors.RESET}'
+            s += (
+                f'{Colors.GREEN}{args.env}{Colors.RESET} bump: {Colors.GREEN}'
+                + f'{bump_time}\n'
+                + Colors.RESET
+            )
         s += '\n'
         output += s
     return less(output.encode('utf8'))

@@ -38,7 +38,7 @@ def format_date(dt):
     return dt.strftime('%Y-%m-%d')
 
 def failing_tests_fn(week_start):
-    return format_date(week_start) + '_failing_tests.json'
+    return f'{format_date(week_start)}_failing_tests.json'
 
 def fetch_week(week_start):
     url = f'{BUCKET_BASEURL}/{failing_tests_fn(week_start)}'
@@ -65,10 +65,7 @@ def tests_match(s1, s2):
     return s1 in s2 or s2 in s1
 
 def longer(s1, s2):
-    if len(s1) > len(s2):
-        return s1
-    else:
-        return s2
+    return s1 if len(s1) > len(s2) else s2
 
 def is_flake(item):
     b = item['build']
@@ -103,8 +100,7 @@ def associate_fails(test_names, data, default_comment=''):
     d = {k: [] for k in test_names}
     unassociated = []
     for item in data:
-        flake = search_matching_flake(test_names, item['test_name'])
-        if flake:
+        if flake := search_matching_flake(test_names, item['test_name']):
             d[flake].append(item)
         else:
             unassociated.append(item)
@@ -137,22 +133,21 @@ def humanize_days(n):
 
 def human_format_date(dt, today):
     days = (today - dt).days
-    return Colors.BLUE + f'· {format_date(dt)} ({humanize_days(days)})' + Colors.RESET
+    return f'{Colors.BLUE}· {format_date(dt)} ({humanize_days(days)}){Colors.RESET}'
 
 def create_url(build):
-    return CONCOURSE_BASEURL + f"/pipelines/{build['pipeline_name']}/jobs/{build['job_name']}/builds/{build['name']}"
+    return f"{CONCOURSE_BASEURL}/pipelines/{build['pipeline_name']}/jobs/{build['job_name']}/builds/{build['name']}"
 
 def pretty_flake(flake, today, logs=False):
-    lines = []
-    lines.append(Colors.YELLOW + f"❄ \"{flake['test_name']}\"" + Colors.RESET)
-
+    lines = [f"""{Colors.YELLOW}❄ \"{flake['test_name']}\"{Colors.RESET}"""]
     if not logs:
         lines.append(f'  Run with --logs "{flake["test_name"]}" to see error logs')
 
-    comments = flake['comments']
-    if comments:
-        for l in comments.splitlines():
-            lines.append('  ' + Colors.PURPLEISH + l + Colors.RESET)
+    if comments := flake['comments']:
+        lines.extend(
+            f'  {Colors.PURPLEISH}{l}{Colors.RESET}'
+            for l in comments.splitlines()
+        )
     lines.append('')
     for fail in flake['fails']:
         b = fail['build']
@@ -161,20 +156,17 @@ def pretty_flake(flake, today, logs=False):
         s = human_format_date(end_time, today)
         if (today - end_time) < datetime.timedelta(days=CONCOURSE_LOG_RETENTION_DAYS):
             url = create_url(b)
-            s = s + ' ' + url
-        lines.append('  ' + s)
+            s = f'{s} {url}'
+        lines.append(f'  {s}')
         if logs:
             lines.append('')
-            for l in fail['context'].splitlines():
-                lines.append('      ' + l)
+            lines.extend(f'      {l}' for l in fail['context'].splitlines())
             lines.append('')
 
     return "\n".join(lines) + '\n'
 
 def pretty_flakes(flakes, today, logs=False):
-    lines = []
-    for flake in flakes:
-        lines.append(pretty_flake(flake, today, logs))
+    lines = [pretty_flake(flake, today, logs) for flake in flakes]
     return '\n'.join(lines)
 
 explain = '''Tips:
@@ -204,7 +196,7 @@ def main():
 
     if args.discover:
 
-        test_names = set([i['test_name'] for i in unassociated])
+        test_names = {i['test_name'] for i in unassociated}
         flake_candidates, _ = associate_fails(test_names, unassociated, '(if this is a flaky test, please add it to flaky-tests.yaml)')
         sort_flakes(flake_candidates)
         pager(explain + pretty_flakes(flake_candidates, today))
@@ -216,8 +208,7 @@ def main():
 
 
 def test():
-    data = fetch(1)
-    return data
+    return fetch(1)
 
 
 if __name__ == '__main__':

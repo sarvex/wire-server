@@ -69,10 +69,7 @@ def simplify_body(content):
         return json.loads(content)
     except Exception:
         try:
-            if isinstance(content, bytes):
-                return content.decode("utf8")
-            else:
-                return content
+            return content.decode("utf8") if isinstance(content, bytes) else content
         except Exception:
             b = b64encode(content).decode("utf8")
             return {"base64data": b, "comment": "binary blob has been replaced"}
@@ -84,13 +81,13 @@ def simplify_response(response):
     Request and response bodies of the input are parsed as JSON if possible.
     """
 
-    result = {}
-
-    result["request"] = {
-        "url": response.request.url,
-        "method": response.request.method,
-        "body": simplify_body(response.request.body),
-        "headers": dict(response.request.headers),
+    result = {
+        "request": {
+            "url": response.request.url,
+            "method": response.request.method,
+            "body": simplify_body(response.request.body),
+            "headers": dict(response.request.headers),
+        }
     }
 
     result["response"] = {
@@ -145,10 +142,10 @@ class Context:
         if not internal:
             service = "nginz"
 
-        name = "WIREAPI_BASEURL_" + service.upper()
+        name = f"WIREAPI_BASEURL_{service.upper()}"
         baseurl = os.environ[name]
         if not relative_url.startswith("/access"):
-            relative_url = "/v4" + relative_url
+            relative_url = f"/v4{relative_url}"
         return urljoin(baseurl, relative_url)
 
     @staticmethod
@@ -172,7 +169,7 @@ class Context:
 
         preq = self.session.prepare_request(req)
         if self.access_token is not None:
-            preq.headers["Authorization"] = "Bearer " + self.access_token
+            preq.headers["Authorization"] = f"Bearer {self.access_token}"
         res = self.session.send(preq)
 
         # dont retry token refresh requests
@@ -190,7 +187,7 @@ class Context:
                 d = res_refresh.json()
                 self.set_access_token(d["access_token"])
 
-                preq.headers["Authorization"] = "Bearer " + self.access_token
+                preq.headers["Authorization"] = f"Bearer {self.access_token}"
                 res = self.session.send(preq)
                 self.detect_cookies(res)
                 return res
@@ -238,8 +235,7 @@ class Context:
         Without this function the request.Session would collect
         multiple 'zuid' cookies.
         """
-        set_cookie = res.headers.get("Set-Cookie")
-        if set_cookie:
+        if set_cookie := res.headers.get("Set-Cookie"):
             # clear up potential old 'zuid' cookies
             del self.session.cookies["zuid"]
 
@@ -305,13 +301,12 @@ def simple_expect_status(status_code, res_simple):
 def upload_new_keypackage(ctx, state):
     kp, ref = generate_key_package(state)
     key_packages = [kp]
-    res = api.upload_key_packages(
+    return api.upload_key_packages(
         ctx,
         user=None,
         client=state.client_identity["client"],
         key_packages=key_packages,
     )
-    return res
 
 
 def save(res, path):
@@ -579,7 +574,7 @@ class LogWithContext:
         o = dict(self.context)
         o["msg"] = msg
         o["t"] = epoch_millis()
-        o.update(kwargs)
+        o |= kwargs
         line = json.dumps(o)
         self.logger.info(line)
 
@@ -845,10 +840,10 @@ def main_analyze(basedir):
                 d["message_received"] - admin["message_send_begin"]
             )
 
-    if len(post_commit_bundle_duration) > 0:
+    if post_commit_bundle_duration:
         print_stats("post_commit_bundle_duration", post_commit_bundle_duration)
 
-    if len(send_to_receive_duration) > 0:
+    if send_to_receive_duration:
         print_stats("send_to_receive_duration", send_to_receive_duration)
 
     if admin.get("message_send_end"):
@@ -903,8 +898,7 @@ def select_users(basedir, batch_index, batch_size):
        batch_index: starting from 0
     """
     all_users = sorted(list_regular_users(basedir))
-    users = all_users[batch_index * batch_size : (batch_index + 1) * batch_size]
-    return users
+    return all_users[batch_index * batch_size : (batch_index + 1) * batch_size]
 
 
 async def main_receive(basedir, batch_index=0, batch_size=100):
@@ -978,10 +972,7 @@ def fetch_notifications(ctx, state):
     result = []
 
     while get_page:
-        if last is not None:
-            since = str(last)
-        else:
-            since = None
+        since = str(last) if last is not None else None
         res_notifs = save(
             get_notifications(ctx, since=since, client=state.client_identity["client"]),
             j(state.client_dir, "res_notifs.json"),

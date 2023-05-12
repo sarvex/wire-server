@@ -47,21 +47,14 @@ class Service:
 
     @property
     def internal_name(self):
-        if self._internal_name is None:
-            return self.name
-        else:
-            return self._internal_name
+        return self.name if self._internal_name is None else self._internal_name
 
     def path(self):
         return os.path.join(ROOT, "dist", self.name)
 
     def config_file(self):
-        if self.config is None:
-            base = self.name
-        else:
-            base = self.config
-        return os.path.join(ROOT, "services", self.name,
-                            base + ".integration.yaml")
+        base = self.name if self.config is None else self.config
+        return os.path.join(ROOT, "services", self.name, f"{base}.integration.yaml")
 
 
     def spawn(self, config_file, environment):
@@ -247,8 +240,8 @@ class NginzInstance(Instance):
         with open(os.path.join(self.tmpdir.name, "upstreams"), 'w') as f:
             for service, port in service_map.items():
                 print(f"upstream {service.internal_name} {{", file=f)
-                print(f"  least_conn;", file=f)
-                print(f"  keepalive 32;", file=f)
+                print("  least_conn;", file=f)
+                print("  keepalive 32;", file=f)
                 print(f"  server 127.0.0.1:{port} max_fails=3 weight=1;", file=f)
                 print("}", file=f)
             print("upstream federator_external {", file=f)
@@ -280,7 +273,7 @@ def check_prerequisites(services):
 
 def color_output(sub, service, backend_name):
     if backend_name is not None:
-        backend_name = "@" + backend_name
+        backend_name = f"@{backend_name}"
     try:
         for line in sub.stdout:
             logging.info(f"{service.color}[{service.name}{backend_name}] {line.rstrip()}{Colors.RESET}")
@@ -323,12 +316,12 @@ def cleanup_instances(instances):
 
 def start_backend(services, suffix, domain, backend_name):
     # build a service map by choosing an arbitrary instance of each service
-    service_map = dict((s.service, s.port) for s in services)
+    service_map = {s.service: s.port for s in services}
 
-    instances = set()
-    for blueprint in services:
-        instances.add(blueprint.spawn(service_map, environment, suffix, domain, backend_name))
-
+    instances = {
+        blueprint.spawn(service_map, environment, suffix, domain, backend_name)
+        for blueprint in services
+    }
     failed_instances = [instance for instance in instances
                         if instance.exception is not None]
 
@@ -432,7 +425,7 @@ if __name__ == '__main__':
             fed_port=9098)
     ]
 
-    check_prerequisites(set(s.service for s in backend_a))
+    check_prerequisites({s.service for s in backend_a})
 
     try:
         instances = set()

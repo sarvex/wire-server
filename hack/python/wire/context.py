@@ -15,11 +15,8 @@ class Context:
     def mkurl(self, service, path, *, internal=False, protocol="http"):
         port = self.service_map[service]
         if not path or path[0] != "/":
-            path = "/" + path
-        if self.version is not None and not internal:
-            vpath = f"/v{self.version}"
-        else:
-            vpath = ""
+            path = f"/{path}"
+        vpath = "" if self.version is None or internal else f"/v{self.version}"
         return f"{protocol}://localhost:{port}{vpath}{path}"
 
     @staticmethod

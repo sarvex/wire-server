@@ -18,10 +18,7 @@ def obj_qid(obj):
     is already a qualified ID, return the object itself, otherwise assume the ID
     is contained in a `qualified_id` field, and return that.
     """
-    if "qualified_id" in obj:
-        return obj["qualified_id"]
-    else:
-        return obj
+    return obj["qualified_id"] if "qualified_id" in obj else obj
 
 
 def obj_path(obj):
@@ -36,10 +33,7 @@ def conv_canonical(obj):
 
 
 def obj_id(user):
-    if isinstance(user, str):
-        return user
-    else:
-        return user["id"]
+    return user if isinstance(user, str) else user["id"]
 
 
 def conv_v2(conv):

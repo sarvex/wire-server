@@ -20,7 +20,7 @@ import sys
 def make_constraint(e):
     e = e.strip()
     if ' ' in e:
-        e = '(' + e + ')'
+        e = f'({e})'
     return f'Member {e} r'
 
 def f(m):
